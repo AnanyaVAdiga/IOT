@@ -1,0 +1,53 @@
+CODE :-
+
+#include "Ubidots.h"
+#include <ESP8266WiFi.h>
+#include <DHT.h>
+#define FIRE_PIN A0 // Pin connected to MQ-2 sensor
+#define DHT_PIN D2 // Pin connected to DHT11 sensor
+#define BUZZER_PIN D5 // Pin connected to the buzzer
+#define WIFI_SSID "me"
+#define WIFI_PASSWORD "1234567890"
+const char* UBIDOTS_TOKEN = "BBFF-MqQ8RJOegOpdUXqWFsi7f9iAwGgpYP";
+#define DHT_TYPE DHT11
+DHT dht(DHT_PIN, DHT_TYPE);
+WiFiClient client;
+Ubidots ubidots(UBIDOTS_TOKEN, UBI_HTTP);
+void setup() {
+Serial.begin(115200);
+WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+while (WiFi.status() != WL_CONNECTED) {
+delay(500);
+Serial.print(".");
+}
+Serial.println("WiFi Connected");
+dht.begin();
+pinMode(BUZZER_PIN, OUTPUT);
+}
+void loop() {
+float temperature = dht.readTemperature();
+float humidity = dht.readHumidity();
+int gasValue = analogRead(FIRE_PIN);
+Serial.print("Temperature: ");
+Serial.println(temperature);
+Serial.print("Humidity: ");
+Serial.println(humidity);
+Serial.print("Gas Value: ");
+Serial.println(gasValue);
+if (temperature > 30.0 && gasValue > 350) {
+Serial.println("Forest fire detected!");
+digitalWrite(BUZZER_PIN, HIGH); // Turn on the buzzer
+ubidots.add("temperature", temperature);
+ubidots.add("humidity", humidity);
+ubidots.add("gasValue", gasValue);
+bool bufferSent = ubidots.send("automated-forest-fire-detection-and-alert-system-with-water-
+deployment-v1.0"); // Replace with your device label
+if (bufferSent) {
+Serial.println("Data sent to Ubidots successfully!");
+} else {
+Serial.println("Failed to send data to Ubidots!");
+}
+digitalWrite(BUZZER_PIN, LOW); // Turn off the buzzer
+}
+delay(1000);
+}
